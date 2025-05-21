@@ -15,12 +15,6 @@ const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } = requ
 const { v4: uuidv4 } = require('uuid');
 const mime = require('mime-types');
 
-// Definir el directorio temporal
-const tempDir = path.join(__dirname, '../temp');
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-}
-
 // Funciones de logging
 function logError(error, message) {
     console.error(`[${new Date().toISOString()}] ${message}`);
