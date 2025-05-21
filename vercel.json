@@ -1,11 +1,11 @@
 {
-    "version": 2,
-    "builds": [
-      { "src": "src/app.js", "use": "@vercel/node" }
-    ],
-    "routes": [
-      { "src": "/socket.io/(.*)", "dest": "src/app.js" },
-      { "src": "/public/(.*)", "dest": "/public/$1" },
-      { "src": "/(.*)", "dest": "src/app.js" }
-    ]
-  }
+  "version": 2,
+  "framework": "node",
+  "buildCommand": "npm install",
+  "outputDirectory": ".",
+  "routes": [
+    { "src": "/socket.io/(.*)", "dest": "src/app.js" },
+    { "src": "/public/(.*)", "dest": "/public/$1" },
+    { "src": "/(.*)", "dest": "src/app.js" }
+  ]
+}
