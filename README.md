@@ -16,7 +16,7 @@ Sistema de control y gestión para Fortox, desarrollado con Node.js y Express.
 ## 🛠️ Tecnologías y Servicios
 
 ### Infraestructura y Hosting
-
+ 
 #### Servidor Linux (Cloud Cluster)
 - **Ubuntu Server 24 LTS 64-bit**
 - **Configuración**: 2 CPU Cores / 4GB RAM / 60GB SSD / 100Mbps
