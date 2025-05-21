@@ -6,10 +6,10 @@ const http = require('http');
 const WebSocket = require('ws');
 const db = require('../db/db');
 const jwt = require('jsonwebtoken');
-const { S3Client } = require('@aws-sdk/client-s3');
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const helmet = require('helmet');
 require('dotenv').config();
-2
+
 // Verificar variables de entorno críticas
 const requiredEnvVars = [
   'DB_HOST',
@@ -107,9 +107,12 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.DO_SPACES_SECRET
   }
 });
-// Configuración de CORS simplificada
+
+// Ajustar la configuración de CORS para Vercel
 app.use(cors({
-  origin: [process.env.DOMAIN_URL, process.env.DOMAIN_URL.replace('www.', '')], // Permitir solicitudes desde el dominio configurado y sin www
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.DOMAIN_URL, process.env.DOMAIN_URL.replace('www.', '')]
+    : ['http://localhost:3900', 'http://localhost:8100', 'capacitor://localhost', 'ionic://localhost'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -653,10 +656,10 @@ app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/img/favicon.ico'));
 });
 
-// Manejador de errores global
+// Ajustar el manejo de errores para Vercel
 app.use((err, req, res, next) => {
-  console.error('❌ Error global:', err);
-  res.status(500).json({
+  console.error('❌ Error:', err);
+  res.status(err.status || 500).json({
     error: 'Error interno del servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Ha ocurrido un error'
   });
@@ -665,7 +668,7 @@ app.use((err, req, res, next) => {
 // Iniciar el servidor
 const PORT = process.env.PORT || 3900;
 server.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
 
 // Manejar errores no capturados
