@@ -14,6 +14,18 @@
     { "src": "/(.*)", "dest": "src/app.js" }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "DB_HOST": "@db_host",
+    "DB_USER": "@db_user",
+    "DB_PASSWORD": "@db_password",
+    "DB_NAME": "@db_name",
+    "PORT_DB": "@port_db",
+    "DB_CONNECTION_LIMIT": "@db_connection_limit",
+    "DO_SPACES_ENDPOINT": "@do_spaces_endpoint",
+    "DO_SPACES_REGION": "@do_spaces_region",
+    "DO_SPACES_KEY": "@do_spaces_key",
+    "DO_SPACES_SECRET": "@do_spaces_secret",
+    "DO_SPACES_BUCKET": "@do_spaces_bucket",
+    "DOMAIN_URL": "@domain_url"
   }
 }

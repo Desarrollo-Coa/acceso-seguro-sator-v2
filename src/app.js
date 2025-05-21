@@ -9,6 +9,25 @@ const jwt = require('jsonwebtoken');
 const { S3Client } = require('@aws-sdk/client-s3');
 const helmet = require('helmet');
 require('dotenv').config();
+2
+// Verificar variables de entorno críticas
+const requiredEnvVars = [
+  'DB_HOST',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_NAME',
+  'PORT_DB',
+  'DO_SPACES_ENDPOINT',
+  'DO_SPACES_KEY',
+  'DO_SPACES_SECRET',
+  'DO_SPACES_BUCKET'
+];
+
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingEnvVars.length > 0) {
+  console.error('❌ Variables de entorno faltantes:', missingEnvVars);
+  process.exit(1);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -634,7 +653,28 @@ app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/img/favicon.ico'));
 });
 
+// Manejador de errores global
+app.use((err, req, res, next) => {
+  console.error('❌ Error global:', err);
+  res.status(500).json({
+    error: 'Error interno del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Ha ocurrido un error'
+  });
+});
+
+// Iniciar el servidor
 const PORT = process.env.PORT || 3900;
 server.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
+
+// Manejar errores no capturados
+process.on('uncaughtException', (err) => {
+  console.error('❌ Error no capturado:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Promesa rechazada no manejada:', err);
+  process.exit(1);
 });
