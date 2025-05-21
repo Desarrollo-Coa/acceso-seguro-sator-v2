@@ -36,7 +36,7 @@ const server = http.createServer(app);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", "https://acceso-seguro-sator-v2.vercel.app"],
       scriptSrc: [
         "'self'", "'unsafe-inline'",
         "https://code.jquery.com",
@@ -44,37 +44,24 @@ app.use(helmet({
         "https://cdn.jsdelivr.net",
         "https://stackpath.bootstrapcdn.com",
         "https://cdn.socket.io",
-        "https://cdnjs.cloudflare.com"
+        "https://cdnjs.cloudflare.com",
+        "https://acceso-seguro-sator-v2.vercel.app"
       ],
       scriptSrcAttr: ["'unsafe-inline'"],
       scriptSrcElem: ["'self'", "'unsafe-inline'", "https:"],
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-      imgSrc: ["'self'", "data:", "https://gestion-contratistas-os.nyc3.digitaloceanspaces.com", "https://gestion-contratistas-os.nyc3.cdn.digitaloceanspaces.com"],
-      mediaSrc: ["'self'", "https://gestion-contratistas-os.nyc3.digitaloceanspaces.com", "https://gestion-contratistas-os.nyc3.cdn.digitaloceanspaces.com"],
-      connectSrc: ["'self'", "https:", "wss:", "ws:"],
+      imgSrc: ["'self'", "data:", "https://gestion-contratistas-os.nyc3.digitaloceanspaces.com", "https://gestion-contratistas-os.nyc3.cdn.digitaloceanspaces.com", "https://acceso-seguro-sator-v2.vercel.app"],
+      mediaSrc: ["'self'", "https://gestion-contratistas-os.nyc3.digitaloceanspaces.com", "https://gestion-contratistas-os.nyc3.cdn.digitaloceanspaces.com", "https://acceso-seguro-sator-v2.vercel.app"],
+      connectSrc: ["'self'", "https:", "wss:", "ws:", "https://acceso-seguro-sator-v2.vercel.app"],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"],
-      frameSrc: ["'self'"],
+      frameSrc: ["'self'", "https://acceso-seguro-sator-v2.vercel.app"],
       workerSrc: ["'self'", "blob:"]
     }
   },
-  crossOriginEmbedderPolicy: { policy: "credentialless" },
-  crossOriginOpenerPolicy: { policy: "same-origin" },
-  crossOriginResourcePolicy: { policy: "same-site" },
-  dnsPrefetchControl: true,
-  frameguard: { action: 'deny' },
-  hidePoweredBy: true,
-  hsts: { 
-    maxAge: 31536000, 
-    includeSubDomains: true, 
-    preload: true 
-  },
-  ieNoOpen: true,
-  noSniff: true,
-  originAgentCluster: true,
-  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  xssFilter: true
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false
 }));
 
 // Agregar cabeceras de seguridad adicionales
@@ -111,7 +98,7 @@ const s3Client = new S3Client({
 // Ajustar la configuración de CORS para Vercel
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.DOMAIN_URL, process.env.DOMAIN_URL.replace('www.', '')]
+    ? ['https://acceso-seguro-sator-v2.vercel.app', 'http://localhost:3900', 'http://localhost:8100', 'capacitor://localhost', 'ionic://localhost']
     : ['http://localhost:3900', 'http://localhost:8100', 'capacitor://localhost', 'ionic://localhost'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
