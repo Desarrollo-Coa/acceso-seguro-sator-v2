@@ -259,29 +259,46 @@ controller.mostrarNegarSolicitud = async (req, res) => {
 
 // Aprobar solicitud
 controller.aprobarSolicitud = async (req, res) => {
-    const { id } = req.params;
-    const token = req.cookies.token;
+    try {
+        const { solicitudId } = req.params;
+        const { comentario } = req.body;
 
-    jwt.verify(token, SECRET_KEY, async (err, decoded) => {
-        if (err) {
-            return res.redirect('/login');
-        }
+        // Generar HTML del informe
+        const html = await generateInformeHTML({
+            solicitud: req.solicitud,
+            colaboradores: req.colaboradores,
+            vehiculos: req.vehiculos,
+            contractorName: req.contractorName,
+            interventorName: req.interventorName
+        });
 
-        const { id: usuarioId } = decoded;
+        // Generar PDF en memoria
+        const pdfBuffer = await generatePDFInMemory(html);
+        
+        // Subir PDF a Spaces
+        const pdfUrl = await uploadToSpacesFromBuffer(
+            pdfBuffer,
+            `informe_${solicitudId}.pdf`,
+            'documentos'
+        );
 
-        try {
-            const query = 'UPDATE solicitudes SET estado = "aprobada" WHERE id = ?';
-            await connection.execute(query, [id]);
+        // Actualizar estado en la base de datos
+        await connection.execute(
+            'UPDATE solicitudes SET estado = "aprobado", comentario_sst = ?, fecha_aprobacion = NOW() WHERE id = ?',
+            [comentario, solicitudId]
+        );
 
-            const accionQuery = 'INSERT INTO acciones (solicitud_id, usuario_id, accion) VALUES (?, ?, "pendiente")';
-            await connection.execute(accionQuery, [id, usuarioId]);
+        // Guardar URL del documento
+        await connection.execute(
+            'INSERT INTO sst_documentos (solicitud_id, tipo, url) VALUES (?, "informe", ?)',
+            [solicitudId, pdfUrl]
+        );
 
-            res.redirect('/vista-sst');
-        } catch (error) {
-            console.error('Error al aprobar la solicitud:', error);
-            res.status(500).send('Error al aprobar la solicitud');
-        }
-    });
+        res.json({ success: true, pdfUrl });
+    } catch (error) {
+        console.error('Error en aprobarSolicitud:', error);
+        res.status(500).json({ error: 'Error al aprobar la solicitud' });
+    }
 };
 
 // Negar solicitud (Guardar el comentario y la acción) 
@@ -670,88 +687,38 @@ ${documentosFaltantes.map((doc, index) => `${index + 1}. ${doc}`).join('\n')}`;
 
 // Descargar documentos de una solicitud
 controller.descargarSolicitud = async (req, res) => {
-    const { solicitudId } = req.params;
-    console.log('[RUTAS] Descargando documentos de la solicitud con ID:', solicitudId);
-
     try {
-        // Crear directorio temporal si no existe
-        const tempDir = path.join(__dirname, '..', 'temp');
-        if (!fs.existsSync(tempDir)) {
-            await fs.promises.mkdir(tempDir, { recursive: true });
-        }
+        const { solicitudId } = req.params;
 
-        // Obtener documentos de la solicitud
+        // Obtener todos los documentos de la solicitud
         const [documentos] = await connection.execute(
-            'SELECT url FROM sst_documentos WHERE solicitud_id = ?',
+            'SELECT * FROM sst_documentos WHERE solicitud_id = ?',
             [solicitudId]
         );
 
-        if (!documentos || documentos.length === 0) {
-            return res.status(404).json({ success: false, message: 'No se encontraron documentos para esta solicitud' });
+        if (documentos.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron documentos' });
         }
 
-        try {
-            // Crear archivo ZIP
-            const zipFileName = `documentos_solicitud_${solicitudId}_${Date.now()}.zip`;
-            const zipPath = path.join(tempDir, zipFileName);
-            const output = fs.createWriteStream(zipPath);
-            const archive = archiver('zip', { zlib: { level: 9 } });
+        // Descargar todos los documentos
+        const files = await Promise.all(documentos.map(async doc => {
+            const response = await axios.get(doc.url, { responseType: 'arraybuffer' });
+            return {
+                name: `${doc.tipo}_${solicitudId}${path.extname(doc.url)}`,
+                buffer: Buffer.from(response.data)
+            };
+        }));
 
-            // Manejar eventos del archivo ZIP
-            output.on('close', () => {
-                console.log('✅ ZIP creado exitosamente:', { path: zipPath, size: archive.pointer() });
-                res.download(zipPath, zipFileName, (err) => {
-                    if (err) {
-                        console.error('Error al enviar el archivo:', err);
-                        if (!res.headersSent) {
-                            res.status(500).json({ success: false, message: 'Error al descargar el archivo' });
-                        }
-                    }
-                    // Eliminar archivo ZIP después de enviarlo
-                    fs.unlink(zipPath, (unlinkErr) => {
-                        if (unlinkErr) {
-                            console.error('Error al eliminar archivo temporal:', unlinkErr);
-                        }
-                    });
-                });
-            });
+        // Generar ZIP en memoria
+        const zipBuffer = await generateZipInMemory(files);
 
-            archive.on('error', (err) => {
-                throw err;
-            });
-
-            // Conectar archivo ZIP con respuesta
-            archive.pipe(output);
-
-            // Agregar documentos al ZIP
-            for (const doc of documentos) {
-                const filePath = path.join(__dirname, '..', 'public', doc.url);
-                if (fs.existsSync(filePath)) {
-                    archive.file(filePath, { name: path.basename(doc.url) });
-                } else {
-                    console.warn('Archivo no encontrado:', filePath);
-                }
-            }
-
-            // Finalizar archivo ZIP
-            await archive.finalize();
-
-        } catch (zipError) {
-            console.error('Error al crear el ZIP:', zipError);
-            if (!res.headersSent) {
-                res.status(500).json({ success: false, message: 'Error al crear el archivo ZIP' });
-            }
-        }
-
+        // Enviar ZIP al cliente
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=solicitud_${solicitudId}.zip`);
+        res.send(zipBuffer);
     } catch (error) {
-        console.error('Error al generar el archivo ZIP:', error);
-        if (!res.headersSent) {
-            res.status(500).json({ 
-                success: false,
-                message: 'Error al generar el archivo ZIP', 
-                error: error.message 
-            });
-        }
+        console.error('Error en descargarSolicitud:', error);
+        res.status(500).json({ error: 'Error al descargar la solicitud' });
     }
 };
 
