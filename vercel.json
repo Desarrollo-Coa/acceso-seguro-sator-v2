@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "buildCommand": "npm install",
+  "outputDirectory": "public",
+  "devCommand": "npm run dev",
+  "framework": null,
   "builds": [
     { "src": "src/app.js", "use": "@vercel/node" }
   ],
