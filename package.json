@@ -1,7 +1,6 @@
 {
   "name": "coa-control-system",
   "version": "1.0.0",
-  "type": "module",
   "description": "Sistema de control para Fortox",
   "main": "src/app.js",
   "scripts": {
